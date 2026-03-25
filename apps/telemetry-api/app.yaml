@@ -6,8 +6,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/YOUR_ORG/iot-gitops.git
-    targetRevision: main
+    repoURL: https://github.com/carlessanagustin/labs-iot.git
+    targetRevision: master
     path: apps/telemetry-api
   destination:
     server: https://kubernetes.default.svc

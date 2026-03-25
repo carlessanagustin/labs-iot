@@ -303,8 +303,6 @@ spec:
 ```bash
 git add .
 git commit -m "feat: initial IoT platform manifests"
-git remote add origin https://github.com/YOUR_ORG/iot-gitops.git
-git push -u origin main
 ```
 
 ---
@@ -314,9 +312,10 @@ git push -u origin main
 **Step 1: Register your Git repo with Argo CD**
 
 ```bash
-argocd repo add https://github.com/YOUR_ORG/iot-gitops.git \
-  --username YOUR_GITHUB_USER \
-  --password YOUR_GITHUB_TOKEN
+argocd repo add https://github.com/carlessanagustin/labs-iot.git
+#https://github.com/YOUR_ORG/iot-gitops.git \
+#  --username YOUR_GITHUB_USER \
+#  --password YOUR_GITHUB_TOKEN
 ```
 
 **Step 2: Create the MQTT Broker Application**
@@ -346,7 +345,7 @@ spec:
 ```
 
 ```bash
-kubectl apply -f argocd-apps/mqtt-broker-app.yaml
+kubectl apply -f apps/mqtt-broker/app.yaml
 ```
 
 **Step 3: Create the Telemetry API Application**

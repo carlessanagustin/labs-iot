@@ -14,5 +14,6 @@ spec:
     namespace: iot-platform
   syncPolicy:
     automated:
+      enabled: false
       prune: true
       selfHeal: true

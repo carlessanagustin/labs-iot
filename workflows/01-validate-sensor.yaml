@@ -1,0 +1,48 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: validate-sensor-
+  namespace: argo
+  labels:
+    component: iot-pipeline
+    stage: validation
+spec:
+  entrypoint: validate-reading
+  arguments:
+    parameters:
+      - name: device-id
+        value: "sensor-001"
+      - name: temperature
+        value: "23.5"
+      - name: humidity
+        value: "61.2"
+
+  templates:
+    - name: validate-reading
+      inputs:
+        parameters:
+          - name: device-id
+          - name: temperature
+          - name: humidity
+      script:
+        image: python:3.11-slim
+        command: [python]
+        source: |
+          import sys
+
+          device_id   = "{{inputs.parameters.device-id}}"
+          temperature = float("{{inputs.parameters.temperature}}")
+          humidity    = float("{{inputs.parameters.humidity}}")
+
+          errors = []
+          if not (-40 <= temperature <= 85):
+              errors.append(f"Temperature {temperature}C out of range [-40, 85]")
+          if not (0 <= humidity <= 100):
+              errors.append(f"Humidity {humidity}% out of range [0, 100]")
+
+          if errors:
+              print(f"[FAIL] {device_id}: {'; '.join(errors)}")
+              sys.exit(1)
+          else:
+              print(f"[PASS] {device_id}: temp={temperature}C hum={humidity}%")
+

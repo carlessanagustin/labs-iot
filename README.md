@@ -430,7 +430,6 @@ argocd app sync mqtt-broker telemetry-api
 3. How does Argo CD detect that the live state has drifted from the desired state?
 
 ---
----
 
 ## Lab 2 — Beginner–Intermediate: IoT Telemetry Data Pipeline with Argo Workflows
 
@@ -456,9 +455,9 @@ argocd app sync mqtt-broker telemetry-api
 
 ```bash
 kubectl create namespace argo
-
-kubectl apply -n argo -f \
-  https://github.com/argoproj/argo-workflows/releases/latest/download/install.yaml
+# https://github.com/argoproj/argo-workflows/releases
+export ARGO_WORKFLOWS_VERSION="v4.0.3"
+kubectl apply --server-side -n argo -f "https://github.com/argoproj/argo-workflows/releases/download/${ARGO_WORKFLOWS_VERSION}/quick-start-minimal.yaml"
 ```
 
 **Step 2: Patch the auth mode for local access**
@@ -485,6 +484,20 @@ kubectl -n argo port-forward deployment/argo-server 2746:2746 &
 ```bash
 argo version
 argo list -n argo
+```
+
+* Advanced
+
+```bash
+export ARGO_SERVER='127.0.0.1:2746'
+export ARGO_HTTP=false
+export ARGO_HTTP1=true
+export ARGO_SECURE=true
+export ARGO_BASE_HREF=
+export ARGO_TOKEN=''
+export ARGO_NAMESPACE=argo ;# or whatever your namespace is
+#export KUBECONFIG=/dev/null ;# recommended
+argo list
 ```
 
 > ✅ **Checkpoint:** Open `https://localhost:2746`. The Argo Workflows UI loads. Running `argo list` returns an empty table.
@@ -806,17 +819,19 @@ kubectl get cronworkflows -n argo
 
 ```bash
 kubectl create namespace argo-rollouts
-
-kubectl apply -n argo-rollouts -f \
-  https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml
+kubectl apply -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml
 ```
 
 **Step 2: Install the kubectl plugin**
 
+* Mac installation
+
 ```bash
-curl -LO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
-chmod +x kubectl-argo-rollouts-linux-amd64
-sudo mv kubectl-argo-rollouts-linux-amd64 /usr/local/bin/kubectl-argo-rollouts
+curl -LO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-darwin-amd64
+chmod +x kubectl-argo-rollouts-darwin-amd64
+mv kubectl-argo-rollouts-darwin-amd64 ls $HOME/.local/bin/kubectl-argo-rollouts
+# test
+kubectl argo rollouts version
 ```
 
 **Step 3: Install Prometheus for AnalysisTemplates**
@@ -824,12 +839,21 @@ sudo mv kubectl-argo-rollouts-linux-amd64 /usr/local/bin/kubectl-argo-rollouts
 ```bash
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
-
 helm install prometheus prometheus-community/kube-prometheus-stack \
   --namespace monitoring \
   --create-namespace \
   --set grafana.enabled=true \
   --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false
+```
+
+```bash
+# Get Grafana 'admin' user password by running:
+kubectl --namespace monitoring get secrets prometheus-grafana -o jsonpath="{.data.admin-password}" | base64 -d ; echo
+# Access Grafana local instance:
+export POD_NAME=$(kubectl --namespace monitoring get pod -l "app.kubernetes.io/name=grafana,app.kubernetes.io/instance=prometheus" -oname)
+kubectl --namespace monitoring port-forward $POD_NAME 3000
+# Get your grafana admin user password by running:
+kubectl get secret --namespace monitoring -l app.kubernetes.io/component=admin-secret -o jsonpath="{.items[0].data.admin-password}" | base64 --decode ; echo
 ```
 
 > ✅ **Checkpoint:** `kubectl get pods -n argo-rollouts` shows the controller running. `kubectl argo rollouts version` returns the installed version.

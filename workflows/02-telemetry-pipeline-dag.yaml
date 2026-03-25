@@ -1,0 +1,155 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: telemetry-pipeline-
+  namespace: argo
+  labels:
+    component: iot-pipeline
+spec:
+  entrypoint: iot-dag
+  arguments:
+    parameters:
+      - name: batch-id
+        value: "batch-20240315-001"
+      - name: device-id
+        value: "gateway-edge-07"
+
+  templates:
+
+    # DAG orchestrator
+    - name: iot-dag
+      dag:
+        tasks:
+          - name: ingest
+            template: ingest-raw-data
+            arguments:
+              parameters:
+                - name: batch-id
+                  value: "{{workflow.parameters.batch-id}}"
+
+          - name: validate
+            template: validate-readings
+            dependencies: [ingest]
+            arguments:
+              parameters:
+                - name: raw-count
+                  value: "{{tasks.ingest.outputs.parameters.raw-count}}"
+
+          - name: enrich
+            template: enrich-with-metadata
+            dependencies: [validate]
+            arguments:
+              parameters:
+                - name: valid-count
+                  value: "{{tasks.validate.outputs.parameters.valid-count}}"
+                - name: device-id
+                  value: "{{workflow.parameters.device-id}}"
+
+          - name: aggregate
+            template: compute-aggregates
+            dependencies: [enrich]
+
+          - name: alert-check
+            template: check-thresholds
+            dependencies: [enrich]
+
+          - name: store
+            template: persist-to-db
+            dependencies: [aggregate]
+
+    # Step templates
+    - name: ingest-raw-data
+      inputs:
+        parameters:
+          - name: batch-id
+      outputs:
+        parameters:
+          - name: raw-count
+            valueFrom:
+              path: /tmp/raw-count.txt
+      script:
+        image: python:3.11-slim
+        command: [python]
+        source: |
+          import json, random, time
+
+          readings = [
+            {
+              "ts": int(time.time()) + i,
+              "sensor": f"S{i:03d}",
+              "temp": round(20 + random.uniform(-5, 15), 2),
+              "hum":  round(55 + random.uniform(-10, 20), 2),
+              "vib":  round(random.uniform(0, 2.5), 3)
+            }
+            for i in range(50)
+          ]
+          with open("/tmp/raw-count.txt", "w") as f:
+              f.write(str(len(readings)))
+          print(f"Ingested {len(readings)} readings for batch {{inputs.parameters.batch-id}}")
+
+    - name: validate-readings
+      inputs:
+        parameters:
+          - name: raw-count
+      outputs:
+        parameters:
+          - name: valid-count
+            valueFrom:
+              path: /tmp/valid-count.txt
+      script:
+        image: python:3.11-slim
+        command: [python]
+        source: |
+          raw  = int("{{inputs.parameters.raw-count}}")
+          # Simulate ~5% drop rate
+          valid = int(raw * 0.95)
+          dropped = raw - valid
+          print(f"Validated: {valid} accepted, {dropped} dropped (out-of-range)")
+          with open("/tmp/valid-count.txt", "w") as f:
+              f.write(str(valid))
+
+    - name: enrich-with-metadata
+      inputs:
+        parameters:
+          - name: valid-count
+          - name: device-id
+      script:
+        image: python:3.11-slim
+        command: [python]
+        source: |
+          count = "{{inputs.parameters.valid-count}}"
+          device = "{{inputs.parameters.device-id}}"
+          print(f"Enriched {count} readings from {device}")
+          print(f"  location=building-a-floor-2 firmware=v2.3.1 protocol=MQTT-5")
+
+    - name: compute-aggregates
+      script:
+        image: python:3.11-slim
+        command: [python]
+        source: |
+          import random
+          avg_temp = round(20 + random.uniform(0, 10), 2)
+          avg_hum  = round(55 + random.uniform(-5, 15), 2)
+          avg_vib  = round(random.uniform(0.1, 1.2), 3)
+          print(f"Aggregates: avg_temp={avg_temp}C  avg_hum={avg_hum}%  avg_vib={avg_vib}g")
+
+    - name: check-thresholds
+      script:
+        image: python:3.11-slim
+        command: [python]
+        source: |
+          import random
+          alerts = random.randint(0, 4)
+          if alerts:
+              print(f"[ALERT] {alerts} readings exceed temperature or vibration thresholds")
+          else:
+              print("[OK] All readings within safe thresholds")
+
+    - name: persist-to-db
+      script:
+        image: python:3.11-slim
+        command: [python]
+        source: |
+          # In production: write to InfluxDB / TimescaleDB
+          print("[STORED] Aggregated metrics written to time-series database")
+

@@ -1,0 +1,62 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: telemetry-ingestion
+  namespace: iot-platform
+  labels:
+    app: telemetry-ingestion
+    component: iot-core
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: telemetry-ingestion
+  template:
+    metadata:
+      labels:
+        app: telemetry-ingestion
+        version: "v1.0.0"
+    spec:
+      containers:
+        - name: telemetry-ingestion
+          image: kennethreitz/httpbin:latest
+          ports:
+            - containerPort: 80
+          env:
+            - name: APP_VERSION
+              value: "1.0.0"
+            - name: MQTT_BROKER
+              value: "mosquitto.iot-platform.svc.cluster.local:1883"
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+          readinessProbe:
+            httpGet:
+              path: /status/200
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+  strategy:
+    canary:
+      stableService: telemetry-ingestion-stable
+      canaryService: telemetry-ingestion-canary
+      steps:
+        - setWeight: 10           # 10% of traffic to canary
+        - pause: {duration: 2m}
+        - analysis:
+            templates:
+              - templateName: telemetry-error-rate
+            args:
+              - name: service-name
+                value: telemetry-ingestion
+        - setWeight: 30
+        - pause: {duration: 2m}
+        - setWeight: 60
+        - pause: {duration: 1m}
+        - setWeight: 100
+

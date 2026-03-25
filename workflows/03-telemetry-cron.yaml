@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: CronWorkflow
+metadata:
+  name: telemetry-batch-every-5min
+  namespace: argo
+spec:
+  schedules:
+    - "*/5 * * * *"
+  timezone: "UTC"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 30
+  workflowSpec:
+    entrypoint: ingest-batch
+    templates:
+      - name: ingest-batch
+        script:
+          image: python:3.11-slim
+          command: [python]
+          source: |
+            import datetime
+            ts = datetime.datetime.utcnow().isoformat()
+            print(f"[{ts}] Running scheduled telemetry batch ingestion")
+

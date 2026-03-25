@@ -415,7 +415,8 @@ git add . && git commit -m "bad: broken image tag" && git push
 
 ```bash
 argocd app history mqtt-broker
-argocd app rollback mqtt-broker <PREVIOUS_REVISION_ID>
+argocd app rollback mqtt-broker 1
+argocd app sync mqtt-broker telemetry-api
 ```
 
 > ✅ **Checkpoint:** Argo CD rolls back to the last healthy revision. The MQTT broker returns to `Running`.

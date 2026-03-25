@@ -373,7 +373,7 @@ spec:
 ```
 
 ```bash
-kubectl apply -f argocd-apps/telemetry-api-app.yaml
+kubectl apply -f apps/telemetry-api/app.yaml
 ```
 
 **Step 4: Watch Argo CD sync both applications**

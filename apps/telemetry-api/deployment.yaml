@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: telemetry-api
+  namespace: iot-platform
+  labels:
+    app: telemetry-api
+    version: "1.0.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: telemetry-api
+  template:
+    metadata:
+      labels:
+        app: telemetry-api
+        version: "1.0.0"
+    spec:
+      containers:
+        - name: telemetry-api
+          image: kennethreitz/httpbin:latest
+          ports:
+            - containerPort: 80
+          env:
+            - name: MQTT_BROKER_HOST
+              value: "mosquitto.iot-platform.svc.cluster.local"
+            - name: MQTT_BROKER_PORT
+              value: "1883"
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: telemetry-api
+  namespace: iot-platform
+spec:
+  selector:
+    app: telemetry-api
+  ports:
+    - port: 80
+      targetPort: 80
+

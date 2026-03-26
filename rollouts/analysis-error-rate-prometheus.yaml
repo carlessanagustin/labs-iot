@@ -1,0 +1,40 @@
+# kubectl apply -f rollouts/analysis-error-rate-prometheus.yaml
+# kubectl delete -f rollouts/analysis-error-rate-prometheus.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: telemetry-error-rate
+  namespace: iot-platform
+spec:
+  args:
+    - name: service-name
+  metrics:
+    - name: http-error-rate
+      interval: 30s
+      count: 3
+      successCondition: len(result) == 0 || result[0] < 0.05
+      failureLimit: 1
+      provider:
+        prometheus:
+          address: http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            sum(rate(http_requests_total{
+              service="{{args.service-name}}",
+              status=~"5.."
+            }[2m]))
+            /
+            sum(rate(http_requests_total{
+              service="{{args.service-name}}"
+            }[2m]))
+    - name: mqtt-message-lag
+      interval: 60s
+      count: 2
+      successCondition: len(result) == 0 || result[0] < 1000
+      provider:
+        prometheus:
+          address: http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            mqtt_broker_messages_queued{
+              service="{{args.service-name}}"
+            }
+

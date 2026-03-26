@@ -1,3 +1,4 @@
+# kubectl apply -f rollouts/telemetry-ingestion-canary.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Rollout
 metadata:
@@ -36,7 +37,8 @@ spec:
               memory: "128Mi"
           readinessProbe:
             httpGet:
-              path: /status/200
+              #path: /status/200
+              path: /health
               port: 80
             initialDelaySeconds: 5
             periodSeconds: 5

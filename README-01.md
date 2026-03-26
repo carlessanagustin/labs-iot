@@ -145,6 +145,8 @@ spec:
 
 **Step 3: Create the telemetry API manifests**
 
+> `kennethreitz/httpbin` is a throwaway placeholder that gives Argo CD something healthy to deploy and sync, so learners can practice GitOps workflows without needing a real telemetry application.
+
 ```yaml
 # apps/telemetry-api/deployment.yaml
 apiVersion: apps/v1
@@ -195,6 +197,15 @@ spec:
   ports:
     - port: 80
       targetPort: 80
+```
+
+* View service UI
+
+```shell
+kubectl -n iot-platform port-forward svc/telemetry-api  8081:80
+# tests...
+curl -I http://127.0.0.1:8081/status/200
+curl -I http://127.0.0.1:8081/status/400
 ```
 
 **Step 4: Push to GitHub (or any Git remote)**

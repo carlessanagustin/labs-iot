@@ -1,0 +1,25 @@
+# kubectl apply -f rollouts/telemetry-ingestion-canary-services.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: telemetry-ingestion-stable
+  namespace: iot-platform
+spec:
+  selector:
+    app: telemetry-ingestion
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: telemetry-ingestion-canary
+  namespace: iot-platform
+spec:
+  selector:
+    app: telemetry-ingestion
+  ports:
+    - port: 80
+      targetPort: 80
+

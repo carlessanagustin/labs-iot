@@ -1,0 +1,59 @@
+# kubectl apply -f rollouts/telemetry-ingestion-bluegreen.yaml
+# kubectl delete -f rollouts/telemetry-ingestion-bluegreen.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: telemetry-ingestion
+  namespace: iot-platform
+  labels:
+    app: telemetry-ingestion
+    component: iot-core
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: telemetry-ingestion
+  template:
+    metadata:
+      labels:
+        app: telemetry-ingestion
+    spec:
+      containers:
+        - name: telemetry-ingestion
+          image: kennethreitz/httpbin:latest
+          ports:
+            - containerPort: 80
+          env:
+            - name: APP_VERSION
+              value: "1.0.0"
+            - name: MQTT_BROKER
+              value: "mosquitto.iot-platform.svc.cluster.local:1883"
+            - name: PORT
+              value: "80"
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+          readinessProbe:
+            httpGet:
+              path: /status/200
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
+  strategy:
+    blueGreen:
+      activeService: telemetry-ingestion-active
+      previewService: telemetry-ingestion-preview
+      autoPromotionEnabled: false       # require manual approval
+      scaleDownDelaySeconds: 30
+      previewReplicaCount: 2
+      prePromotionAnalysis:
+        templates:
+          - templateName: telemetry-error-rate
+        args:
+          - name: service-name
+            value: telemetry-ingestion
+

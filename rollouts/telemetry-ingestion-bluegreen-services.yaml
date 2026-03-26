@@ -1,7 +1,9 @@
+# kubectl apply -f rollouts/telemetry-ingestion-bluegreen-services.yaml
+# kubectl delete -f rollouts/telemetry-ingestion-bluegreen-services.yaml
 apiVersion: v1
 kind: Service
 metadata:
-  name: telemetry-ingestion-stable
+  name: telemetry-ingestion-active
   namespace: iot-platform
 spec:
   selector:
@@ -13,7 +15,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: telemetry-ingestion-canary
+  name: telemetry-ingestion-preview
   namespace: iot-platform
 spec:
   selector:
